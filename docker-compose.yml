@@ -67,10 +67,13 @@ services:
       restart_policy:
         condition: any
         delay: 10s
+    # TEMPORAL: json-file para ver los logs en Portainer mientras se valida en
+    # staging. Volver a Loki despues (driver: loki, loki-url: ${LOKI_URL}).
     logging:
-      driver: loki
+      driver: json-file
       options:
-        loki-url: ${LOKI_URL}
+        max-size: "10m"
+        max-file: "3"
 
 secrets:
   sa_resultado_app:
