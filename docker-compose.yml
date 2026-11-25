@@ -1,0 +1,79 @@
+# ---------------------------------------------------------------------------
+# Costo y resultado mensual - resultado.flexxus.com.ar
+#
+# Codigo e imagen: bitbucket.org/flexxus_id/flx-resultado-mensual
+# Este repo es solo el stack: lo que Portainer despliega.
+#
+# Sin volumenes a proposito: el contenedor no guarda estado. Los datos viven en
+# BigQuery (proyecto flexxus-resultado-mensual) y los originales de las
+# liquidaciones en el bucket de GCS.
+#
+# Las dos claves de cuentas de servicio de GCP se leen como ARCHIVO, por eso van
+# como secrets de Swarm (external). Hay que crearlos en Portainer > Secrets
+# ANTES de desplegar, o el stack no levanta:
+#   sa_resultado_app   clave JSON de sa-resultado-app (BigQuery + GCS del proyecto)
+#   mrr_credenciales   clave JSON de la cuenta tecnica del BI (solo lee flexxus-bi.erp.mrr_mensual)
+#
+# Variables que hay que cargar en el stack: SERVICE_NAME, NODE, LOKI_URL,
+# DOMAIN_NAME, SINCRONIZAR_AUTOMATICO, ERP_FB_HOST, ERP_FB_PORT,
+# ERP_FB_DATABASE, ERP_FB_USER, ERP_FB_PASSWORD, SESION_SECRETO.
+#
+# Un solo contenedor: la sincronizacion diaria con el ERP corre dentro del
+# proceso (SINCRONIZAR_AUTOMATICO=1). Con mas replicas se duplicaria.
+# El healthcheck viene en la imagen (GET /api/salud).
+# ---------------------------------------------------------------------------
+version: '3.6'
+
+services:
+  resultado:
+    image: fabreguesm/flx-resultado-mensual:0.1.0
+    hostname: resultado-flexxus-com-ar
+    networks:
+      - traefik
+    secrets:
+      - sa_resultado_app
+      - mrr_credenciales
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+      - GCP_PROYECTO=flexxus-resultado-mensual
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/sa_resultado_app
+      - MRR_CREDENCIALES=/run/secrets/mrr_credenciales
+      - SINCRONIZAR_AUTOMATICO=${SINCRONIZAR_AUTOMATICO}
+      - ERP_FB_HOST=${ERP_FB_HOST}
+      - ERP_FB_PORT=${ERP_FB_PORT}
+      - ERP_FB_DATABASE=${ERP_FB_DATABASE}
+      - ERP_FB_USER=${ERP_FB_USER}
+      - ERP_FB_PASSWORD=${ERP_FB_PASSWORD}
+      - SESION_SECRETO=${SESION_SECRETO}
+    deploy:
+      replicas: 1
+      placement:
+        constraints: ["${NODE}"]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.${SERVICE_NAME}-http.entrypoints=web"
+        - "traefik.http.routers.${SERVICE_NAME}-http.rule=Host(`${DOMAIN_NAME}`)"
+        - "traefik.http.middlewares.${SERVICE_NAME}-http.redirectscheme.scheme=https"
+        - "traefik.http.routers.${SERVICE_NAME}-https.rule=Host(`${DOMAIN_NAME}`)"
+        - "traefik.http.routers.${SERVICE_NAME}-https.entrypoints=https"
+        - "traefik.http.routers.${SERVICE_NAME}-https.tls=true"
+        - "traefik.http.routers.${SERVICE_NAME}-https.tls.certresolver=myresolver"
+        - "traefik.http.services.${SERVICE_NAME}-http.loadbalancer.server.port=3000"
+      restart_policy:
+        condition: any
+        delay: 10s
+    logging:
+      driver: loki
+      options:
+        loki-url: ${LOKI_URL}
+
+secrets:
+  sa_resultado_app:
+    external: true
+  mrr_credenciales:
+    external: true
+
+networks:
+  traefik:
+    external: true
+    name: traefik-network
