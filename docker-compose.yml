@@ -12,7 +12,7 @@
 # como secrets de Swarm (external). Hay que crearlos en Portainer > Secrets
 # ANTES de desplegar, o el stack no levanta:
 #   sa_resultado_app   clave JSON de sa-resultado-app (BigQuery + GCS del proyecto)
-#   mrr_credenciales   clave JSON de la cuenta tecnica del BI (solo lee flexxus-bi.erp.mrr_mensual)
+#   flexxus_bi_service   clave JSON de la cuenta tecnica del BI (solo lee flexxus-bi.erp.mrr_mensual)
 #
 # Variables que hay que cargar en el stack: SERVICE_NAME, NODE, LOKI_URL,
 # DOMAIN_NAME, SINCRONIZAR_AUTOMATICO, ERP_FB_HOST, ERP_FB_PORT,
@@ -32,12 +32,12 @@ services:
       - traefik
     secrets:
       - sa_resultado_app
-      - mrr_credenciales
+      - flexxus_bi_service
     environment:
       - TZ=America/Argentina/Buenos_Aires
       - GCP_PROYECTO=flexxus-resultado-mensual
       - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/sa_resultado_app
-      - MRR_CREDENCIALES=/run/secrets/mrr_credenciales
+      - MRR_CREDENCIALES=/run/secrets/flexxus_bi_service
       - SINCRONIZAR_AUTOMATICO=${SINCRONIZAR_AUTOMATICO}
       - ERP_FB_HOST=${ERP_FB_HOST}
       - ERP_FB_PORT=${ERP_FB_PORT}
@@ -70,7 +70,7 @@ services:
 secrets:
   sa_resultado_app:
     external: true
-  mrr_credenciales:
+  flexxus_bi_service:
     external: true
 
 networks:
