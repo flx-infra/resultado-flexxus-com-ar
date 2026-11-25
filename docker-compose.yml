@@ -15,7 +15,7 @@
 #   flexxus_bi_service   clave JSON de la cuenta tecnica del BI (solo lee flexxus-bi.erp.mrr_mensual)
 #
 # Variables que hay que cargar en el stack: SERVICE_NAME, NODE, LOKI_URL,
-# DOMAIN_NAME, SINCRONIZAR_AUTOMATICO, ERP_FB_HOST, ERP_FB_PORT,
+# DOMAIN_NAME, PUERTO_PUBLICO (temporal), SINCRONIZAR_AUTOMATICO, ERP_FB_HOST, ERP_FB_PORT,
 # ERP_FB_DATABASE, ERP_FB_USER, ERP_FB_PASSWORD, SESION_SECRETO.
 #
 # Un solo contenedor: la sincronizacion diaria con el ERP corre dentro del
@@ -28,6 +28,11 @@ services:
   resultado:
     image: fabreguesm/flx-resultado-mensual:0.1.0
     hostname: resultado-flexxus-com-ar
+    # TEMPORAL: puerto publicado para validar en staging mientras no exista el
+    # DNS de resultado.flexxus.com.ar. Por HTTP el login no funciona (la cookie
+    # de sesion es Secure). Sacarlo cuando el dominio ande.
+    ports:
+      - '${PUERTO_PUBLICO}:3000'
     networks:
       - traefik
     secrets:
